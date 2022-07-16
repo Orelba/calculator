@@ -1,5 +1,4 @@
 // Display Values
-// const DISP_LINE_MAX_CHAR = 13
 let operatorInserted = false
 
 // Calculator Values
@@ -8,7 +7,6 @@ const savedVals = {
   n2: '',
   operator: '',
   result: '',
-  prevResult: '',
   resetCurrentOp: function () {
     this.n1 = ''
     this.n2 = ''
@@ -18,7 +16,10 @@ const savedVals = {
   resetAllVals: function () {
     this.resetCurrentOp()
     this.result = ''
-    this.prevResult = ''
+  },
+  continueOperation: function () {
+    this.n1 = this.result.toString()
+    this.n2 = ''
   }
 }
 
@@ -52,17 +53,19 @@ function getInput() {
   // Get Digits
   elDigitBtns.forEach(btn => {
     btn.addEventListener('click', () => {
-      if (operatorInserted === false) {
-        if (btn.textContent === '.' && savedVals.n1.includes('.')) return 0
-        savedVals.n1 += btn.textContent
-      } else {
-        if (btn.textContent === '.' && savedVals.n2.includes('.')) return 0
-        savedVals.n2 += btn.textContent
-      }
+      if (!restrictOperationLineLength()) {
+        if (operatorInserted === false) {
+          if (btn.textContent === '.' && savedVals.n1.includes('.')) return 0
+          savedVals.n1 += btn.textContent
+        } else {
+          if (btn.textContent === '.' && savedVals.n2.includes('.')) return 0
+          savedVals.n2 += btn.textContent
+        }
 
-      if (savedVals.n1 && savedVals.operator && savedVals.n2) setResult()
-      updateDisplay()
-      setDispSectFocus('operations')
+        if (savedVals.n1 && savedVals.operator && savedVals.n2) setResult()
+        updateDisplay()
+        setDispSectFocus('operations')
+      }
     })
   })
 
@@ -70,7 +73,10 @@ function getInput() {
   elOperatorBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       let chosenOperator = btn.getAttribute('id')
-      if (!savedVals.n1 && chosenOperator === '-') {
+      if (savedVals.n2) {
+        savedVals.operator = chosenOperator
+        savedVals.continueOperation()
+      } else if (!savedVals.n1 && chosenOperator === '-') {
         savedVals.n1 += chosenOperator
       } else if (savedVals.n1 && savedVals.n1 !== '-') {
         savedVals.operator = chosenOperator
@@ -99,7 +105,6 @@ function operate(operator, n1, n2) {
   }
 }
 
-//! Add to SetResult: Do Not Calculate when there are no n1 + operator + n2 or prevResult and other stuff
 function setResult() {
   if (savedVals.operator === '/' && (parseFloat(savedVals.n1) === 0 || parseFloat(savedVals.n2) === 0)) return showMathError()
 
@@ -110,14 +115,10 @@ function setResult() {
 
   if (savedVals.n1 && !savedVals.n2) result = parseFloat(savedVals.n1)
 
-  if (result % 1 !== 0) {
-    result = parseFloat(result.toFixed(4))
-  } else if (result.toString().length > 13) {
-    result = result.toExponential(2)
-  }
+  if (result % 1 !== 0) result = parseFloat(result.toFixed(4))
+  if (result.toString().length > 13) result = result.toExponential(2)
 
   savedVals.result = result
-  savedVals.prevResult = result
 
   updateDisplay()
   setDispSectFocus('result')
@@ -141,13 +142,18 @@ function backspace() {
         break
       } else if (savedVals[item].length === 1) {
         savedVals[item] = ''
-        if (item = 'operator') operatorInserted = false
+        if (item === 'operator') operatorInserted = false
         break
       }
     }
   }
 
-  setResult()
+  if (savedVals.result && savedVals.n2) {
+    setResult()
+  } else {
+    savedVals.result = ''
+    updateDisplay()
+  }
   savedVals.n1 ? setDispSectFocus('operations') : setDispSectFocus('result')
 }
 
@@ -185,14 +191,13 @@ function setDispSectFocus(section) {
   }
 }
 
-/* function restrictDispLineLen() {
-  const elButtons = document.querySelectorAll('button')
-  const currLineLen = (savedVals.n1 + savedVals.operator + savedVals.n2).length
-
-  elButtons.forEach(btn => btn.addEventListener('click', () => {
-
-  }))
-} */
+function restrictOperationLineLength() {
+  if (savedVals.n1.length >= 13 && !savedVals.operator) {
+    return true
+  } else if (savedVals.n2.length >= 12) {
+    return true
+  }
+}
 
 function showMathError() {
   const elResultDispSect = document.querySelector('.result')
@@ -221,22 +226,4 @@ function calculator() {
 calculator()
 
 // To Add:
-// Second operation
-// Restrict display line length
 // Support for keyboard
-
-
-
-// function populateDisplayOperations() {
-//   const elOperationsDisplay = document.querySelector('.operations')
-//   elDigitBtns.forEach(btn => {
-//     btn.addEventListener('click', () => {
-//       (btn.textContent === '.' && operationsValue.includes('.')) ? 0 : operationsValue += btn.textContent
-//       if (operationsValue.length > 22) {
-//         elOperationsDisplay.textContent = parseInt(operationsValue).toExponential(2)
-//       } else {
-//         elOperationsDisplay.textContent = operationsValue
-//       }
-//     })
-//   })
-// }
