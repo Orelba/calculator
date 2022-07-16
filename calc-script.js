@@ -1,5 +1,14 @@
+// Calculator Buttons
+const elDigitBtns = document.querySelectorAll('.digit')
+const elOperatorBtns = document.querySelectorAll('.operator')
+const elACBtn = document.querySelector('#ac')
+const elDeleteBtn = document.querySelector('#delete')
+const elEqualsBtn = document.querySelector('.equals-btn')
+const elPercentBtn = document.querySelector('#percent')
+
 // Display Values
 let operatorInserted = false
+let mathError = false
 
 // Calculator Values
 const savedVals = {
@@ -23,6 +32,79 @@ const savedVals = {
   }
 }
 
+//Input Handling
+elDigitBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    appendInput(btn.textContent)
+  })
+})
+elOperatorBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    appendInput(btn.getAttribute('id'))
+  })
+})
+elACBtn.addEventListener('click', () => allClear())
+elDeleteBtn.addEventListener('click', () => backspace())
+elPercentBtn.addEventListener('click', () => convertToPercentage())
+elEqualsBtn.addEventListener('click', () => setResult())
+
+window.addEventListener('keydown', handleKeyboardInput)
+
+function handleKeyboardInput(e) {
+  if (e.key >= 0 && e.key <= 9 || e.key === '.' || e.key === '+' || e.key === '-' || e.key === '*' || e.key === '/') appendInput(e.key)
+  if (e.key === '=' || e.key === 'Enter') setResult()
+  if (e.key === 'Backspace') backspace()
+  if (e.key === 'Escape') allClear()
+  if (e.key === '%') convertToPercentage()
+}
+
+function appendInput(input) {
+  switch (input) {
+    case '0':
+    case '1':
+    case '2':
+    case '3':
+    case '4':
+    case '5':
+    case '6':
+    case '7':
+    case '8':
+    case '9':
+    case '.':
+      if (savedVals.n1.length < 13 && !savedVals.operator || savedVals.n2.length < 12 && savedVals.operator) {
+        if (operatorInserted === false) {
+          if (input === '.' && savedVals.n1.includes('.')) return 0
+          savedVals.n1 += input
+        } else {
+          if (input === '.' && savedVals.n2.includes('.')) return 0
+          savedVals.n2 += input
+        }
+
+        if (savedVals.n1 && savedVals.operator && savedVals.n2) setResult()
+        updateDisplay()
+        setDispSectFocus('operations')
+      }
+      break
+    case '+':
+    case '-':
+    case '*':
+    case '/':
+      if (savedVals.n2 && !mathError) {
+        savedVals.operator = input
+        savedVals.continueOperation()
+      } else if (!savedVals.n1 && input === '-') {
+        savedVals.n1 += input
+      } else if (savedVals.n1 && savedVals.n1 !== '-') {
+        savedVals.operator = input
+        operatorInserted = true
+      }
+
+      updateDisplay()
+      setDispSectFocus('operations')
+  }
+}
+
+// Operation Handling
 function add(n1, n2) {
   return n1 + n2
 }
@@ -46,49 +128,6 @@ function percentage(partialValue, totalValue) {
   return result.toString()
 }
 
-function getInput() {
-  const elDigitBtns = document.querySelectorAll('.digit')
-  const elOperatorBtns = document.querySelectorAll('.operator')
-
-  // Get Digits
-  elDigitBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (!restrictOperationLineLength()) {
-        if (operatorInserted === false) {
-          if (btn.textContent === '.' && savedVals.n1.includes('.')) return 0
-          savedVals.n1 += btn.textContent
-        } else {
-          if (btn.textContent === '.' && savedVals.n2.includes('.')) return 0
-          savedVals.n2 += btn.textContent
-        }
-
-        if (savedVals.n1 && savedVals.operator && savedVals.n2) setResult()
-        updateDisplay()
-        setDispSectFocus('operations')
-      }
-    })
-  })
-
-  // Get Operator
-  elOperatorBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      let chosenOperator = btn.getAttribute('id')
-      if (savedVals.n2) {
-        savedVals.operator = chosenOperator
-        savedVals.continueOperation()
-      } else if (!savedVals.n1 && chosenOperator === '-') {
-        savedVals.n1 += chosenOperator
-      } else if (savedVals.n1 && savedVals.n1 !== '-') {
-        savedVals.operator = chosenOperator
-        operatorInserted = true
-      }
-
-      updateDisplay()
-      setDispSectFocus('operations')
-    })
-  })
-}
-
 function operate(operator, n1, n2) {
   n1 = parseFloat(n1)
   n2 = parseFloat(n2)
@@ -107,6 +146,7 @@ function operate(operator, n1, n2) {
 
 function setResult() {
   if (savedVals.operator === '/' && (parseFloat(savedVals.n1) === 0 || parseFloat(savedVals.n2) === 0)) return showMathError()
+  mathError = false
 
   let result
 
@@ -177,7 +217,6 @@ function updateDisplay() {
   elOperationsDispSect.textContent = `${savedVals.n1} ${savedVals.operator} ${savedVals.n2}`
   elResultDispSect.textContent = (savedVals.result) ? savedVals.result : ''
 
-  // Show 0 On Display
   if (savedVals.result.toString() === '0') elResultDispSect.textContent = '0'
 }
 
@@ -191,39 +230,9 @@ function setDispSectFocus(section) {
   }
 }
 
-function restrictOperationLineLength() {
-  if (savedVals.n1.length >= 13 && !savedVals.operator) {
-    return true
-  } else if (savedVals.n2.length >= 12) {
-    return true
-  }
-}
-
 function showMathError() {
+  updateDisplay()
   const elResultDispSect = document.querySelector('.result')
   elResultDispSect.textContent = 'Math Error!'
+  mathError = true
 }
-
-// Calculator
-function calculator() {
-  const elACBtn = document.querySelector('#ac')
-  const elDeleteBtn = document.querySelector('#delete')
-  const elEqualsBtn = document.querySelector('.equals-btn')
-  const elPercentBtn = document.querySelector('#percent')
-
-  getInput()
-
-  // All Clear Button
-  elACBtn.addEventListener('click', () => allClear())
-  // Delete Button
-  elDeleteBtn.addEventListener('click', () => backspace())
-  // Percentage Button
-  elPercentBtn.addEventListener('click', () => convertToPercentage())
-  // Equals Button
-  elEqualsBtn.addEventListener('click', () => setResult())
-}
-
-calculator()
-
-// To Add:
-// Support for keyboard
